@@ -104,14 +104,37 @@ String selectedAttr(bool selected)
 
 String getTraccarDeviceIdForDisplay()
 {
-  char deviceId[40] = {0};
-  const uint64_t mac = ESP.getEfuseMac();
-  snprintf(deviceId, sizeof(deviceId), "%08lX-%04X-%04X-%04X-%012llX",
-           (unsigned long)(mac >> 32),
-           (unsigned int)((mac >> 16) & 0xFFFF),
-           (unsigned int)(mac & 0xFFFF),
-           (unsigned int)((mac >> 48) & 0xFFFF),
-           (unsigned long long)(mac & 0xFFFFFFFFFFFFULL));
+  char deviceId[9] = {0};
+  uint64_t seed = ESP.getEfuseMac() >> 8;
+  for (int i = 0; i < 8; i++, seed >>= 5)
+  {
+    byte x = (byte)seed & 0x1f;
+    if (x >= 10)
+    {
+      x = x - 10 + 'A';
+      switch (x)
+      {
+      case 'B':
+        x = 'W';
+        break;
+      case 'D':
+        x = 'X';
+        break;
+      case 'I':
+        x = 'Y';
+        break;
+      case 'O':
+        x = 'Z';
+        break;
+      }
+    }
+    else
+    {
+      x += '0';
+    }
+    deviceId[i] = x;
+  }
+  deviceId[8] = 0;
   return String(deviceId);
 }
 

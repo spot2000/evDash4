@@ -4237,6 +4237,42 @@ String Board320_240::getHardwareDeviceId() const
   return String(deviceId);
 }
 
+String getTraccarDeviceIdFromEfuse()
+{
+  char deviceId[9] = {0};
+  uint64_t seed = ESP.getEfuseMac() >> 8;
+  for (int i = 0; i < 8; i++, seed >>= 5)
+  {
+    byte x = (byte)seed & 0x1f;
+    if (x >= 10)
+    {
+      x = x - 10 + 'A';
+      switch (x)
+      {
+      case 'B':
+        x = 'W';
+        break;
+      case 'D':
+        x = 'X';
+        break;
+      case 'I':
+        x = 'Y';
+        break;
+      case 'O':
+        x = 'Z';
+        break;
+      }
+    }
+    else
+    {
+      x += '0';
+    }
+    deviceId[i] = x;
+  }
+  deviceId[8] = 0;
+  return String(deviceId);
+}
+
 String Board320_240::getPairDeviceId() const
 {
   const String hardwareDeviceId = normalizeDeviceIdForApi(getHardwareDeviceId());
@@ -5011,7 +5047,7 @@ void Board320_240::netLoop()
     }
     if (hasGpsFix && (lastTraccarSendAtMs == 0 || (millis() - lastTraccarSendAtMs) > kTraccarIntervalMs))
     {
-      const String traccarDeviceId = normalizeDeviceIdForApi(getHardwareDeviceId());
+      const String traccarDeviceId = normalizeDeviceIdForApi(getTraccarDeviceIdFromEfuse());
       syslog->println("Traccar deviceId: " + traccarDeviceId);
       bool sentOk = false;
       int httpCode = -1;
