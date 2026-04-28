@@ -77,7 +77,7 @@ namespace
   constexpr uint16_t kAbrpHttpsConnectTimeoutMs = 1000;
   constexpr uint16_t kAbrpHttpsIoTimeoutMs = 2500;
   constexpr uint32_t kTraccarIntervalMs = 5000;
-  constexpr const char *kTraccarServerHost = "traccar.conik.net";
+  constexpr const char *kTraccarServerHost = "demo3.traccar.org";
   constexpr uint16_t kTraccarPorts[] = {5055, 80};
   constexpr float kGpsMaxSpeedKmh = 250.0f;
   constexpr float kGpsJitterMeters = 200.0f;
