@@ -102,6 +102,19 @@ String selectedAttr(bool selected)
   return selected ? " selected" : "";
 }
 
+String getTraccarDeviceIdForDisplay()
+{
+  char deviceId[40] = {0};
+  const uint64_t mac = ESP.getEfuseMac();
+  snprintf(deviceId, sizeof(deviceId), "%08lX-%04X-%04X-%04X-%012llX",
+           (unsigned long)(mac >> 32),
+           (unsigned int)((mac >> 16) & 0xFFFF),
+           (unsigned int)(mac & 0xFFFF),
+           (unsigned int)((mac >> 48) & 0xFFFF),
+           (unsigned long long)(mac & 0xFFFFFFFFFFFFULL));
+  return String(deviceId);
+}
+
 /**
  * Get off/on text
  */
@@ -214,6 +227,7 @@ void handleRoot()
   text += "<tr><td>MQTT pub.topic</td><td><input data-key='mqttPubTopic' value='" + htmlEscape(String(liveDataWebInt->settings.mqttPubTopic)) + "'></td></tr>";
   text += "<tr><td>Contribute data</td><td><input type='checkbox' data-key='contributeData'" + checkedAttr(liveDataWebInt->settings.contributeData) + "></td></tr>";
   text += "<tr><td>Contribute token</td><td><input data-key='contributeToken' value='" + htmlEscape(String(liveDataWebInt->settings.contributeToken)) + "'></td></tr>";
+  text += "<tr><td>Traccar deviceId</td><td>" + htmlEscape(getTraccarDeviceIdForDisplay()) + "</td></tr>";
 
   text += "<tr><th colspan='2'>GPS module</th></tr>";
   text += "<tr><td>GPS module type</td><td><select data-key='gpsModuleType'>";

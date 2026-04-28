@@ -5012,6 +5012,7 @@ void Board320_240::netLoop()
     if (hasGpsFix && (lastTraccarSendAtMs == 0 || (millis() - lastTraccarSendAtMs) > kTraccarIntervalMs))
     {
       const String traccarDeviceId = normalizeDeviceIdForApi(getHardwareDeviceId());
+      syslog->println("Traccar deviceId: " + traccarDeviceId);
       bool sentOk = false;
       int httpCode = -1;
       for (size_t i = 0; i < (sizeof(kTraccarPorts) / sizeof(kTraccarPorts[0])); i++)
