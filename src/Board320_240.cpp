@@ -52,6 +52,7 @@ So in summary, it initializes the core display and hardware functionality, retri
 #include <time.h>
 #include <ArduinoJson.h>
 #include "CarModelUtils.h"
+#include "traccar.h"
 
 #if defined(BOARD_M5STACK_CORE2) || defined(BOARD_M5STACK_CORES3)
 #include <PubSubClient.h>
@@ -75,6 +76,9 @@ namespace
   constexpr size_t kAbrpFormBufferSize = 1536;
   constexpr uint16_t kAbrpHttpsConnectTimeoutMs = 1000;
   constexpr uint16_t kAbrpHttpsIoTimeoutMs = 2500;
+  constexpr uint32_t kTraccarIntervalMs = 5000;
+  constexpr const char *kTraccarServerHost = "traccar.conik.net";
+  constexpr uint16_t kTraccarPorts[] = {5055, 80};
   constexpr float kGpsMaxSpeedKmh = 250.0f;
   constexpr float kGpsJitterMeters = 200.0f;
   constexpr float kGpsMaxJumpMetersShort = 2000.0f;
@@ -4913,8 +4917,9 @@ void Board320_240::netLoop()
     return true;
   }();
 
+  const bool traccarConfigured = (liveData->settings.traccarEnabled == 1);
   const bool contributeConfigured = (liveData->settings.contributeData == 1);
-  const bool internetTasksActive = remoteApiConfigured || abrpConfigured || contributeConfigured;
+  const bool internetTasksActive = remoteApiConfigured || abrpConfigured || traccarConfigured || contributeConfigured;
 
   if (wifiReady && !internetTasksActive)
   {
@@ -4993,6 +4998,55 @@ void Board320_240::netLoop()
       netSendData(true);
       int64_t endTime = esp_timer_get_time();
       lastNetSendDurationMs = static_cast<uint32_t>((endTime - startTime) / 1000);
+    }
+  }
+
+  // Upload GPS position to Traccar (default every 5 seconds)
+  if (netReady && traccarConfigured)
+  {
+    const bool hasGpsFix = isGpsFixUsable(liveData);
+    if (!hasGpsFix)
+    {
+      syslog->println("Traccar send skipped: no GPS fix");
+    }
+    if (hasGpsFix && (lastTraccarSendAtMs == 0 || (millis() - lastTraccarSendAtMs) > kTraccarIntervalMs))
+    {
+      const String traccarDeviceId = normalizeDeviceIdForApi(getHardwareDeviceId());
+      bool sentOk = false;
+      int httpCode = -1;
+      for (size_t i = 0; i < (sizeof(kTraccarPorts) / sizeof(kTraccarPorts[0])); i++)
+      {
+        const uint16_t port = kTraccarPorts[i];
+        syslog->println("Traccar send tick (port " + String(port) + ")");
+        if (Traccar::sendPosition(kTraccarServerHost,
+                                  port,
+                                  traccarDeviceId,
+                                  liveData->params.currentTime,
+                                  liveData->params.gpsLat,
+                                  liveData->params.gpsLon,
+                                  liveData->params.speedKmhGPS,
+                                  liveData->params.gpsAlt,
+                                  liveData->params.gpsHeadingDeg,
+                                  liveData->params.socPerc,
+                                  liveData->params.chargingOn,
+                                  httpCode))
+        {
+          sentOk = true;
+          break;
+        }
+      }
+
+      lastTraccarSendAtMs = millis();
+      if (sentOk)
+      {
+        liveData->params.lastSuccessNetSendTime = liveData->params.currentTime;
+        updateNetAvailability(true);
+      }
+      else
+      {
+        syslog->println("Traccar send failed, HTTP=" + String(httpCode));
+        updateNetAvailability(false);
+      }
     }
   }
 
