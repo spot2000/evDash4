@@ -3375,8 +3375,12 @@ void Board320_240::syncGPS()
     liveData->params.gpsValid = false;
   }
 
-  // Update GPS speed if valid and enough satellites are available
-  if (gps.speed.isValid() && liveData->params.gpsSat >= 4)
+  // Update GPS speed if valid.
+  //
+  // Traccar expects numeric speed values and shows -1 as an invalid speed.
+  // Requiring >=4 satellites here caused many valid coordinate points to be
+  // uploaded with speed=-1 when speed data itself was available.
+  if (gps.speed.isValid())
   {
     liveData->params.speedKmhGPS = gps.speed.kmph();
   }
