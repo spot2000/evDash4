@@ -14,6 +14,7 @@ namespace
   const uint8_t kPsaCellCount = 108;
   const uint8_t kPsaModuleTempCount = 24; // M5 LiveData stores max 25 module temps.
   const time_t kParkDebounceSec = 120;    // stand still this long (speed <= 1) before leaving drive mode
+  time_t psaLastMovingTime = 0;
 
   bool inRange(float value, float min, float max)
   {
@@ -233,7 +234,7 @@ void CarPeugeotE208::activateCommandQueue()
       "ATSH590",
       "ATFCSH590",
       "ATCRA58F",
-      "22D8501", // charge active
+      "22D8541", // charge active
   };
 
   liveData->params.batModuleTempCount = kPsaModuleTempCount;
@@ -258,6 +259,21 @@ void CarPeugeotE208::activateCommandQueue()
 */
 bool CarPeugeotE208::commandAllowed()
 {
+  const bool canSilentAfterPark =
+      liveData->params.forwardDriveMode &&
+      psaLastMovingTime != 0 &&
+      liveData->params.currentTime - psaLastMovingTime >= kParkDebounceSec &&
+      !liveData->params.chargingOn &&
+      !liveData->params.chargerACconnected &&
+      !liveData->params.chargerDCconnected &&
+      (inRange(liveData->params.speedKmh, 0, 1) ||
+       (liveData->params.auxVoltage > 3 && liveData->params.auxVoltage < 13.8));
+  if (canSilentAfterPark)
+  {
+    liveData->params.forwardDriveMode = false;
+    applyIgnitionState(liveData);
+  }
+
   if (liveData->commandRequest.equals("0902") && liveData->params.carVin[0] != 0)
     return false;
 
@@ -291,6 +307,8 @@ void CarPeugeotE208::parseRowMerged()
   if (did.length() != 4 || !response.startsWith(String("62") + did))
     return;
 
+  liveData->params.getValidResponse = true;
+
   // VCU - request 0x6A2, response 0x682.
   if (liveData->currentAtshRequest.equals("ATSH6A2"))
   {
@@ -307,14 +325,13 @@ void CarPeugeotE208::parseRowMerged()
       // kParkDebounceSec, so a traffic-light stop does not bounce out of drive while a
       // genuine park still releases the latch. Without this clear, forwardDriveMode stayed
       // true forever, ignitionOn never went false and the Sentry auto-stop never armed.
-      static time_t lastMovingTime = 0;
       if (speed > 1)
       {
-        lastMovingTime = liveData->params.currentTime;
+        psaLastMovingTime = liveData->params.currentTime;
         liveData->params.forwardDriveMode = true;
       }
-      else if (liveData->params.forwardDriveMode && lastMovingTime != 0 &&
-               liveData->params.currentTime - lastMovingTime >= kParkDebounceSec)
+      else if (liveData->params.forwardDriveMode && psaLastMovingTime != 0 &&
+               liveData->params.currentTime - psaLastMovingTime >= kParkDebounceSec)
       {
         liveData->params.forwardDriveMode = false;
       }
@@ -546,7 +563,7 @@ void CarPeugeotE208::parseRowMerged()
   }
 
   // OBC/DC-DC charger - request 0x590, response 0x58F.
-  if (liveData->currentAtshRequest.equals("ATSH590") && did == "D850")
+  if (liveData->currentAtshRequest.equals("ATSH590") && did == "D854")
   {
     const bool charging = hexToDecPart(response, 6, 8, 1, false) > 0;
     liveData->params.chargingOn = charging;
@@ -589,7 +606,7 @@ void CarPeugeotE208::loadTestData()
   applyDemoResponse("ATSH6B4", "22D87D1", "62D87D39");
   applyDemoResponse("ATSH6B4", "22D8771", "62D8773A");
   applyDemoResponse("ATSH6B4", "22D8781", "62D87802");
-  applyDemoResponse("ATSH590", "22D8501", "62D85000");
+  applyDemoResponse("ATSH590", "22D8541", "62D85400");
 
   String cells = "62D440";
   for (uint8_t i = 0; i < kPsaCellCount; i++)
