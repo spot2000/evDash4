@@ -1,5 +1,11 @@
 # RELEASE NOTES
 
+### V5.0.6 2026-07-08
+- Peugeot e-208 Sentry/autostop:
+  - The charger-state poll now uses OBC `D854` instead of `D850`. The mobile app's e-CMP captures showed `D850` can report non-zero while unplugged, which makes M5 keep `chargingOn=true` and blocks Sentry forever after parking. `D854` is the verified charge-active flag, so a parked/unplugged e-208 can now clear charging state and enter Sentry.
+  - The e-208 parser now marks successful `62 DID` replies as valid CAN data. Without this, Sentry used only the slow no-CAN fallback even while Peugeot data was decoding correctly.
+  - The e-208 drive latch is now released from the Peugeot profile after 120 s since the last real movement when the last speed is already 0/1 km/h or the 12 V rail indicates DC-DC is off. This also covers the case where the car stops answering CAN before another clean speed=0 sample arrives, preventing stale `forwardDriveMode=true` from keeping `ignitionOn=true` forever after parking.
+
 ### V5.0.5 2026-06-23
 - Peugeot e-208 direct-CAN now reads the VIN and no longer wastes a poll cycle on it — ISO-TP flow-control addressing fix:
   - The mode-09 VIN request (`0902`) is sent on the functional broadcast header `0x7DF` and the BMU answers from its physical response ID `0x7E8`. `sendFlowControlFrame()` addressed the ISO-TP Flow Control frame to `lastPid` (the `0x7DF` broadcast), but an ECU only accepts an FC on its physical request ID (`0x7E0`). The First Frame arrived (`49 02 01 "VR3…"`, the Peugeot WMI) but the BMU never sent the consecutive frames, so the VIN read timed out (~1.2 s) on every poll cycle. Because `carVin` stayed empty, `CarPeugeotE208::commandAllowed()` never suppressed `0902`, so the timeout repeated indefinitely and dragged down the whole loop's responsiveness.
