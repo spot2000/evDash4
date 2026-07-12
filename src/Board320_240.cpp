@@ -1364,6 +1364,31 @@ void Board320_240::printHeapMemory()
 }
 
 /**
+ * Update the IMU motion flag used to wake Sentry.
+ * Motion = angular rate (gyro) OR linear acceleration off ~1 g (accelerometer),
+ * so a smooth straight pull-away wakes the device too, not only a turn/bump.
+ */
+void Board320_240::updateGyroSensorMotion(float gyroX, float gyroY, float gyroZ, float accX, float accY, float accZ)
+{
+  // IMU not ready yet (all axes zero): keep the previous state.
+  if (gyroX == 0.0 && gyroY == 0.0 && gyroZ == 0.0 && accX == 0.0 && accY == 0.0 && accZ == 0.0)
+    return;
+
+  // Angular rate: a turn, bump or being picked up.
+  bool motion = (abs(gyroX) > 15.0 || abs(gyroY) > 15.0 || abs(gyroZ) > 15.0);
+
+  // Linear acceleration: |accel| is ~1 g at rest regardless of mounting angle;
+  // driving accel, braking and road bumps push it off 1 g. The < 4 g guard
+  // ignores a unit/scale glitch, so a bad read falls back to gyro-only instead
+  // of pinning the device permanently awake.
+  const float accMag = sqrt(accX * accX + accY * accY + accZ * accZ);
+  if (accMag < 4.0 && fabs(accMag - 1.0) > 0.12)
+    motion = true;
+
+  liveData->params.gyroSensorMotion = motion;
+}
+
+/**
  * commLoop function - This function runs the main communication loop.
  * It calls the commInterface's mainLoop() method to read data from
  * BLE and CAN interfaces. This allows the communication code to run
