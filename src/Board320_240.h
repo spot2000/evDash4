@@ -198,6 +198,7 @@ protected:
   void sendCasicGpsCommand(uint8_t msgClass, uint8_t msgId, const uint8_t *payload, uint16_t payloadLen);
   void setGpsV21Pps(bool enabled);
   void updateGpsV21PpsMode();
+  void updateGyroSensorMotion(float gyroX, float gyroY, float gyroZ, float accX, float accY, float accZ);
 
 public:
   byte pinButtonLeft = 0;

@@ -473,15 +473,7 @@ void BoardM5stackCoreS3::boardLoop()
 
     CoreS3.Imu.getGyroData(&gyroX, &gyroY, &gyroZ);
     CoreS3.Imu.getAccelData(&accX, &accY, &accZ);
-
-    if (gyroX != 0.0 || gyroY != 0.0 || gyroZ != 0.0 || accX != 0.0 || accY != 0.0 || accZ != 0.0)
-    {
-      liveData->params.gyroSensorMotion = false;
-      if (abs(gyroX) > 15.0 || abs(gyroY) > 15.0 || abs(gyroZ) > 15.0)
-      {
-        liveData->params.gyroSensorMotion = true;
-      }
-    }
+    updateGyroSensorMotion(gyroX, gyroY, gyroZ, accX, accY, accZ);
 
     return;
   }
@@ -506,15 +498,7 @@ void BoardM5stackCoreS3::boardLoop()
 
     CoreS3.Imu.getGyroData(&gyroX, &gyroY, &gyroZ);
     CoreS3.Imu.getAccelData(&accX, &accY, &accZ);
-
-    if (gyroX != 0.0 || gyroY != 0.0 || gyroZ != 0.0 || accX != 0.0 || accY != 0.0 || accZ != 0.0)
-    {
-      liveData->params.gyroSensorMotion = false;
-      if (abs(gyroX) > 15.0 || abs(gyroY) > 15.0 || abs(gyroZ) > 15.0)
-      {
-        liveData->params.gyroSensorMotion = true;
-      }
-    }
+    updateGyroSensorMotion(gyroX, gyroY, gyroZ, accX, accY, accZ);
 
     return;
   }
@@ -641,15 +625,7 @@ void BoardM5stackCoreS3::boardLoop()
 
   CoreS3.Imu.getGyroData(&gyroX, &gyroY, &gyroZ);
   CoreS3.Imu.getAccelData(&accX, &accY, &accZ);
-
-  if (gyroX != 0.0 || gyroY != 0.0 || gyroZ != 0.0 || accX != 0.0 || accY != 0.0 || accZ != 0.0)
-  {
-    liveData->params.gyroSensorMotion = false;
-    if (abs(gyroX) > 15.0 || abs(gyroY) > 15.0 || abs(gyroZ) > 15.0)
-    {
-      liveData->params.gyroSensorMotion = true;
-    }
-  }
+  updateGyroSensorMotion(gyroX, gyroY, gyroZ, accX, accY, accZ);
 }
 
 /**

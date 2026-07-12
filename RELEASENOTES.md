@@ -1,5 +1,9 @@
 # RELEASE NOTES
 
+### V5.0.7 2026-07-12
+- Sentry wake-up now also triggers on linear acceleration, not only rotation:
+  - In Sentry the command queue is stopped and the CAN bus is off (to protect the 12 V), so the device can only wake on motion. The motion detector keyed solely off the gyro (angular rate > 15°/s), which a smooth straight pull-away barely produces, so a car driven away from a parked Sentry state stayed asleep until the first turn or bump and only a screen touch woke it (reported on the Peugeot e-208). It now also wakes when the accelerometer magnitude deviates from ~1 g (driving accel, braking, road bumps); a 4 g guard ignores a bad/unit-mismatched read so it falls back to gyro-only rather than pinning the device permanently awake. Extracted into a shared `updateGyroSensorMotion()` helper used by both Core2 and CoreS3, so the four previously duplicated detection blocks stay in sync.
+
 ### V5.0.6 2026-07-08
 - Peugeot e-208 Sentry/autostop:
   - The charger-state poll now uses OBC `D854` instead of `D850`. The mobile app's e-CMP captures showed `D850` can report non-zero while unplugged, which makes M5 keep `chargingOn=true` and blocks Sentry forever after parking. `D854` is the verified charge-active flag, so a parked/unplugged e-208 can now clear charging state and enter Sentry.
